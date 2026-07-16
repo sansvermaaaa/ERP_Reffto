@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refftonix Drone Labs — Internal ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --purple-primary:#7B2FC4;
+  --purple-secondary:#D24FF0;
+  --purple-dark:#2D0A4E;
+  --canvas-dark:#160429;
+  --gold:#F5B800;
+  --gold-light:#FFD54F;
+  --bg-light:#EDE6F7;
+  --success:#1E9E6B;
+  --danger:#D14343;
+  --glass:rgba(255,255,255,0.05);
+  --glass-border:rgba(255,255,255,0.09);
+  --glass-strong:rgba(255,255,255,0.08);
+  --text-hi:#F4EEFB;
+  --text-mid:#C9B9E3;
+  --text-low:#8A76AC;
+  --radius:16px;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font-body);
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(210,79,240,0.16), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(123,47,196,0.18), transparent 60%),
+    var(--canvas-dark);
+  color:var(--text-hi);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+::selection{background:var(--purple-secondary);color:#fff;}
+a{color:inherit;}
+button{font-family:var(--font-body);cursor:pointer;border:none;}
+input,select,textarea{font-family:var(--font-body);}
+
+.mono{font-family:var(--font-mono);}
+
+/* ---------- Glass primitives ---------- */
+.glass{
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-radius:var(--radius);
+}
+.glass-strong{
+  background:var(--glass-strong);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-radius:var(--radius);
+}
+
+/* ---------- Brand mark ---------- */
+.brand-badge{
+  width:40px;height:40px;border-radius:11px;
+  background:linear-gradient(135deg,var(--purple-primary),var(--purple-secondary));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:700;font-size:19px;color:#fff;
+  box-shadow:0 4px 18px rgba(123,47,196,0.45);
+  flex-shrink:0;
+}
+.brand-row{display:flex;align-items:center;gap:12px;}
+.brand-word{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:0.2px;}
+.brand-word small{display:block;font-family:var(--font-body);font-weight:500;font-size:10.5px;color:var(--text-low);letter-spacing:1.2px;text-transform:uppercase;margin-top:1px;}
+
+/* ---------- Buttons ---------- */
+.btn{
+  padding:10px 18px;border-radius:10px;font-size:13.5px;font-weight:600;
+  transition:transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+}
+.btn:active{transform:scale(0.97);}
+.btn-primary{background:linear-gradient(135deg,var(--purple-primary),var(--purple-secondary));color:#fff;box-shadow:0 6px 20px rgba(123,47,196,0.35);}
+.btn-primary:hover{box-shadow:0 8px 26px rgba(210,79,240,0.45);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#2D1B00;box-shadow:0 6px 18px rgba(245,184,0,0.3);}
+.btn-ghost{background:rgba(255,255,255,0.06);color:var(--text-hi);border:1px solid var(--glass-border);}
+.btn-ghost:hover{background:rgba(255,255,255,0.11);}
+.btn-danger{background:rgba(209,67,67,0.15);color:#ff9d9d;border:1px solid rgba(209,67,67,0.4);}
+.btn-danger:hover{background:rgba(209,67,67,0.25);}
+.btn-success{background:rgba(30,158,107,0.15);color:#7EE7BE;border:1px solid rgba(30,158,107,0.4);}
+.btn-success:hover{background:rgba(30,158,107,0.25);}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+.btn[disabled]{opacity:0.4;cursor:not-allowed;}
+.btn-block{width:100%;justify-content:center;}
+
+/* ---------- Login screen ---------- */
+.login-wrap{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:24px;position:relative;
+}
+.login-wrap::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size:42px 42px;
+  mask-image:radial-gradient(circle at 50% 40%, black, transparent 75%);
+}
+.login-card{
+  width:100%;max-width:400px;padding:38px 34px 32px;position:relative;z-index:1;
+  animation:cardIn .6s cubic-bezier(.16,1,.3,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.98);}to{opacity:1;transform:none;}}
+.login-header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;margin-bottom:30px;}
+.login-badge{width:56px;height:56px;border-radius:15px;font-size:26px;}
+.login-title{font-family:var(--font-display);font-size:21px;font-weight:700;}
+.login-sub{color:var(--text-low);font-size:12.5px;letter-spacing:1.6px;text-transform:uppercase;margin-top:2px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:7px;letter-spacing:0.3px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 14px;border-radius:10px;
+  background:rgba(255,255,255,0.045);border:1px solid var(--glass-border);
+  color:var(--text-hi);font-size:14px;outline:none;transition:border-color .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--purple-secondary);}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-low);}
+.field select option{background:#241040;color:var(--text-hi);}
+.login-error{
+  background:rgba(209,67,67,0.12);border:1px solid rgba(209,67,67,0.35);color:#ff9d9d;
+  font-size:12.5px;padding:10px 13px;border-radius:10px;margin-bottom:16px;display:none;
+}
+.login-error.show{display:block;}
+.login-foot{margin-top:18px;text-align:center;font-size:11.5px;color:var(--text-low);}
+
+/* Dev switcher */
+.dev-switcher{
+  position:fixed;top:16px;right:16px;z-index:500;padding:11px 13px;
+  display:flex;align-items:center;gap:8px;
+}
+.dev-switcher span{font-size:10px;font-weight:700;letter-spacing:1.4px;color:var(--gold-light);text-transform:uppercase;}
+.dev-switcher select{
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);color:var(--text-hi);
+  padding:6px 9px;border-radius:8px;font-size:12px;outline:none;
+}
+.dev-switcher select option{background:#241040;}
+
+/* ---------- App shell ---------- */
+.app{display:none;min-height:100vh;}
+.app.active{display:flex;}
+.sidebar{
+  width:236px;flex-shrink:0;min-height:100vh;padding:22px 16px;
+  background:rgba(22,4,41,0.55);border-right:1px solid var(--glass-border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+}
+.sidebar-brand{padding:6px 8px 22px;border-bottom:1px solid var(--glass-border);margin-bottom:18px;}
+.nav-group{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-low);padding:0 10px;margin:14px 0 8px;font-weight:700;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;
+  color:var(--text-mid);font-size:13.5px;font-weight:500;cursor:pointer;margin-bottom:3px;
+  transition:background .15s, color .15s;
+}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--text-hi);}
+.nav-item.active{background:linear-gradient(135deg,rgba(123,47,196,0.35),rgba(210,79,240,0.2));color:#fff;box-shadow:inset 0 0 0 1px rgba(210,79,240,0.3);}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.6;flex-shrink:0;}
+.sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--glass-border);}
+.role-pill{
+  font-size:10.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px;background:rgba(245,184,0,0.15);color:var(--gold-light);
+  border:1px solid rgba(245,184,0,0.3);display:inline-block;
+}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  padding:16px 30px;display:flex;align-items:center;justify-content:space-between;gap:20px;
+  border-bottom:1px solid var(--glass-border);position:sticky;top:0;background:rgba(22,4,41,0.65);
+  backdrop-filter:blur(14px);z-index:10;
+}
+.view-title{font-family:var(--font-display);font-size:19px;font-weight:600;}
+.view-sub{font-size:12px;color:var(--text-low);margin-top:2px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.user-chip{display:flex;align-items:center;gap:9px;padding:6px 12px 6px 6px;border-radius:30px;}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple-primary),var(--purple-secondary));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.user-chip-name{font-size:12.5px;font-weight:600;}
+.user-chip-role{font-size:10px;color:var(--text-low);}
+
+.announce-bar{
+  padding:9px 30px;font-size:12.5px;display:flex;align-items:center;gap:10px;
+  background:linear-gradient(90deg,rgba(245,184,0,0.13),rgba(245,184,0,0.03));
+  border-bottom:1px solid rgba(245,184,0,0.2);color:var(--gold-light);
+}
+.announce-bar b{color:#fff;}
+
+.content{padding:26px 30px 60px;flex:1;}
+
+/* ---------- Generic content bits ---------- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{padding:18px 20px;}
+.stat-num{font-family:var(--font-display);font-size:28px;font-weight:700;}
+.stat-label{font-size:11.5px;color:var(--text-low);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+
+.panel{padding:22px 24px;margin-bottom:20px;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.panel-title{font-family:var(--font-display);font-size:15.5px;font-weight:600;}
+.panel-title span{display:block;font-family:var(--font-body);font-size:11.5px;color:var(--text-low);font-weight:400;margin-top:3px;}
+
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.9px;
+  color:var(--text-low);padding:0 12px 10px;font-weight:700;
+}
+td{padding:12px;font-size:13px;border-top:1px solid var(--glass-border);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+.table-wrap{overflow-x:auto;}
+
+.badge{padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;display:inline-block;}
+.badge-active{background:rgba(30,158,107,0.15);color:#7EE7BE;}
+.badge-inactive{background:rgba(138,118,172,0.18);color:var(--text-mid);}
+.badge-pending{background:rgba(245,184,0,0.15);color:var(--gold-light);}
+.badge-approved{background:rgba(30,158,107,0.15);color:#7EE7BE;}
+.badge-rejected{background:rgba(209,67,67,0.15);color:#ff9d9d;}
+.badge-admin{background:rgba(245,184,0,0.15);color:var(--gold-light);}
+.badge-hr{background:rgba(210,79,240,0.15);color:#f0a8ff;}
+.badge-employee{background:rgba(123,47,196,0.18);color:#c9a3f0;}
+.badge-project_head{background:rgba(30,158,107,0.15);color:#7EE7BE;}
+
+.empty-state{
+  text-align:center;padding:50px 20px;color:var(--text-low);
+}
+.empty-icon{
+  width:56px;height:56px;border-radius:50%;margin:0 auto 16px;
+  border:2px dashed rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.empty-state p{font-size:13.5px;margin-bottom:16px;}
+
+.pill-btn{
+  padding:5px 11px;border-radius:8px;font-size:11.5px;font-weight:600;background:rgba(255,255,255,0.06);
+  color:var(--text-hi);border:1px solid var(--glass-border);margin-right:5px;transition:background .15s;
+}
+.pill-btn:hover{background:rgba(255,255,255,0.12);}
+.pill-btn.danger{color:#ff9d9d;border-color:rgba(209,67,67,0.35);}
+.pill-btn.gold{color:var(--gold-light);border-color:rgba(245,184,0,0.35);}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:720px){.grid-2{grid-template-columns:1fr;}}
+
+/* progress bar */
+.progress-track{width:100%;height:7px;border-radius:20px;background:rgba(255,255,255,0.07);overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--purple-primary),var(--gold));border-radius:20px;}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(9,2,18,0.65);backdrop-filter:blur(4px);
+  display:none;align-items:flex-start;justify-content:center;z-index:1000;padding:5vh 16px;overflow-y:auto;
+}
+.modal-overlay.show{display:flex;}
+.modal-box{width:100%;max-width:520px;padding:26px;position:relative;animation:cardIn .35s ease;}
+.modal-close{position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,0.06);color:var(--text-hi);font-size:15px;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:rgba(255,255,255,0.13);}
+.modal-title{font-family:var(--font-display);font-size:17px;font-weight:600;margin-bottom:20px;padding-right:30px;}
+
+/* ID Card */
+.id-card{
+  width:340px;border-radius:18px;padding:22px;position:relative;overflow:hidden;
+  background:linear-gradient(155deg,var(--purple-dark) 0%, var(--canvas-dark) 60%);
+  border:1px solid rgba(210,79,240,0.35);
+  box-shadow:0 20px 50px rgba(0,0,0,0.4);
+}
+.id-card::after{
+  content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,rgba(210,79,240,0.35),transparent 70%);
+}
+.id-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;position:relative;z-index:1;}
+.id-card-name{font-family:var(--font-display);font-size:19px;font-weight:700;margin-bottom:2px;position:relative;z-index:1;}
+.id-card-role{font-size:11.5px;color:var(--gold-light);text-transform:uppercase;letter-spacing:1px;font-weight:700;position:relative;z-index:1;}
+.id-card-meta{margin-top:18px;font-family:var(--font-mono);font-size:11px;color:var(--text-mid);position:relative;z-index:1;}
+.id-card-meta div{margin-bottom:5px;display:flex;justify-content:space-between;}
+.id-card-meta div span:first-child{color:var(--text-low);}
+.id-card-strip{margin-top:18px;height:5px;border-radius:4px;background:linear-gradient(90deg,var(--gold),var(--purple-secondary));position:relative;z-index:1;}
+
+/* Radar (signature element) */
+.radar-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 10px 6px;}
+.radar{width:210px;height:210px;position:relative;border-radius:50%;
+  background:radial-gradient(circle, rgba(123,47,196,0.12), rgba(22,4,41,0.4) 70%);
+  border:1px solid rgba(210,79,240,0.25);}
+.radar-ring{position:absolute;border-radius:50%;border:1px solid rgba(210,79,240,0.25);}
+.radar-center{position:absolute;top:50%;left:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold);}
+.radar-sweep{
+  position:absolute;top:50%;left:50%;width:50%;height:2px;transform-origin:left center;
+  background:linear-gradient(90deg, rgba(210,79,240,0.9), transparent);
+  animation:sweep 3s linear infinite;
+}
+@keyframes sweep{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.radar-user{position:absolute;width:12px;height:12px;border-radius:50%;transform:translate(-50%,-50%);transition:all .4s ease;}
+.radar-user.inside{background:var(--success);box-shadow:0 0 14px var(--success);}
+.radar-user.outside{background:var(--danger);box-shadow:0 0 14px var(--danger);}
+.radar-status{margin-top:16px;text-align:center;}
+.radar-status .dist{font-family:var(--font-mono);font-size:22px;font-weight:700;}
+.radar-status .label{font-size:11.5px;color:var(--text-low);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+.alert{padding:12px 15px;border-radius:10px;font-size:13px;margin-top:14px;display:none;}
+.alert.show{display:block;}
+.alert-danger{background:rgba(209,67,67,0.14);border:1px solid rgba(209,67,67,0.35);color:#ff9d9d;}
+.alert-success{background:rgba(30,158,107,0.14);border:1px solid rgba(30,158,107,0.35);color:#7EE7BE;}
+
+.accordion-item{border-top:1px solid var(--glass-border);padding:12px 4px;}
+.accordion-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13.5px;font-weight:600;}
+.accordion-body{margin-top:10px;font-size:12.5px;color:var(--text-mid);display:none;}
+.accordion-body.open{display:block;}
+
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:2000;display:flex;flex-direction:column;gap:10px;}
+.toast{padding:13px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(0,0,0,0.35);animation:toastIn .3s ease;max-width:320px;}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.toast-success{background:linear-gradient(135deg,#1E9E6B,#177d54);color:#fff;}
+.toast-error{background:linear-gradient(135deg,#D14343,#a53434);color:#fff;}
+.toast-info{background:linear-gradient(135deg,var(--purple-primary),var(--purple-secondary));color:#fff;}
+
+.offer-letter{
+  background:#fff;color:#1a1a1a;padding:44px;border-radius:6px;font-family:var(--font-body);
+  max-width:640px;margin:0 auto;
+}
+.offer-letter h2{font-family:var(--font-display);color:var(--purple-primary);}
+.offer-letter .ol-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;border-bottom:2px solid var(--purple-primary);padding-bottom:16px;}
+.offer-letter p{font-size:13.5px;line-height:1.7;margin-bottom:12px;color:#2a2a2a;}
+.offer-letter table{margin:18px 0;}
+.offer-letter td{border:1px solid #ddd;color:#222;font-size:12.5px;}
+.offer-letter th{color:#777;}
+
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{position:absolute;top:0;left:0;width:100%;}
+}
+
+.scroll-thin::-webkit-scrollbar{width:7px;height:7px;}
+.scroll-thin::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:10px;}
+
+.checkbox-row{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;}
+.checkbox-row input{width:auto;}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.form-row{grid-template-columns:1fr;}}
+
+.divider{height:1px;background:var(--glass-border);margin:18px 0;}
+</style>
+</head>
+<body>
+
+<div id="devSwitcher" class="dev-switcher glass"></div>
+<div id="loginRoot"></div>
+<div id="appRoot" class="app"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot" class="toast-wrap"></div>
+
+<script>
+/* =========================================================================
+   REFFTONIX DRONE LABS — INTERNAL ERP
+   Single-file prototype. Data layer isolated behind DB.* so swapping the
+   localStorage-backed store for live Supabase calls later only touches
+   the functions inside the DB object.
+   ========================================================================= */
+
+const STORAGE_KEY = 'reffto_erp_state_v1';
+const SESSION_KEY = 'reffto_erp_session_v1';
+
+/* ---------------- Supabase ---------------- */
+const SUPABASE_URL = 'https://wfxanepwzuacvtfswrcg.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhkd3Noc29xc3V4dW94aWxjeG9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODM2ODksImV4cCI6MjA5OTc1OTY4OX0.AJUQ6Qnm678YAz3-H5XYPzbWAN2Yx4QJzLRCgFqNW58';
+const supabaseClient = (window.supabase && SUPABASE_URL.startsWith('https://'))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+/* profiles table <-> app object field mapping (snake_case in Postgres, camelCase in JS) */
+function profileToRow(p){
+  return {
+    id: p.id, full_name: p.fullName, email: p.email, password: p.password,
+    role: p.role, designation: p.designation, is_active: p.isActive,
+    work_location: p.workLocation, shift_start: p.shiftStart, shift_end: p.shiftEnd,
+    base_salary: p.baseSalary, manager_id: p.managerId, created_at: p.createdAt
+  };
+}
+function rowToProfile(r){
+  return {
+    id: r.id, fullName: r.full_name, email: r.email, password: r.password,
+    role: r.role, designation: r.designation, isActive: r.is_active,
+    workLocation: r.work_location, shiftStart: r.shift_start, shiftEnd: r.shift_end,
+    baseSalary: r.base_salary, managerId: r.manager_id, createdAt: r.created_at
+  };
+}
+
+const GEOFENCE_ANCHORS = {
+  reffto: { key:'reffto', name:'Reffto Office', lat:23.2503182, lng:77.4651986, mapsUrl:'https://maps.app.goo.gl/xAmBHxsZPNwhfTin7?g_st=ac' },
+  lnct:   { key:'lnct',   name:'LNCT Campus',   lat:23.2513124, lng:77.5235824, mapsUrl:'https://maps.app.goo.gl/CWjndSySqBYkhb7w8?g_st=ac' }
+};
+const GEOFENCE_RADIUS_M = 150;
+
+/* ---------------- state ---------------- */
+let appState = { profiles: [], attendance: [], projects: [], phases: [], financialClaims: [], hrTickets: [], announcements: [], requirements: [], leaves: [] };
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ appState = Object.assign(appState, JSON.parse(raw)); }
+  }catch(e){ console.warn('state load failed', e); }
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+}
+function uid(prefix){ return (prefix||'id') + '_' + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+
+/* ---------------- data access module (swap-ready for Supabase) ---------------- */
+const DB = {
+  profiles: {
+    // list/get read the local mirror synchronously so existing render code
+    // doesn't need to change; create/update/delete/refresh talk to Supabase
+    // and then keep the mirror (and the localStorage backup) in sync.
+    list: () => appState.profiles,
+    get: (id) => appState.profiles.find(p => p.id === id),
+    async refresh(){
+      if(!supabaseClient) return;
+      const { data, error } = await supabaseClient.from('profiles').select('*').order('created_at', { ascending:true });
+      if(error){ toast('Could not load profiles: ' + error.message, 'error'); return; }
+      appState.profiles = (data || []).map(rowToProfile);
+      saveState();
+    },
+    async create(data){
+      const rec = { id: uid('emp'), createdAt: Date.now(), isActive: true, ...data };
+      if(supabaseClient){
+        const { error } = await supabaseClient.from('profiles').insert(profileToRow(rec));
+        if(error){ toast('Supabase error: ' + error.message, 'error'); throw error; }
+      }
+      appState.profiles.push(rec);
+      saveState();
+      return rec;
+    },
+    async update(id, patch){
+      const rec = DB.profiles.get(id);
+      if(!rec) return null;
+      Object.assign(rec, patch);
+      if(supabaseClient){
+        const { error } = await supabaseClient.from('profiles').update(profileToRow(rec)).eq('id', id);
+        if(error){ toast('Supabase error: ' + error.message, 'error'); throw error; }
+      }
+      saveState();
+      return rec;
+    },
+    async delete(id){
+      if(supabaseClient){
+        const { error } = await supabaseClient.from('profiles').delete().eq('id', id);
+        if(error){ toast('Supabase error: ' + error.message, 'error'); throw error; }
+      }
+      appState.profiles = appState.profiles.filter(p => p.id !== id);
+      saveState();
+    }
+  },
+  attendance: {
+    list: () => appState.attendance,
+    forProfile: (id) => appState.attendance.filter(a => a.profileId === id),
+    create: (data) => { const rec = { id: uid('att'), ...data }; appState.attendance.push(rec); saveState(); return rec; }
+  },
+  projects: {
+    list: () => appState.projects,
+    get: (id) => appState.projects.find(p => p.id === id),
+    create: (data) => { const rec = { id: uid('prj'), teamIds: [], phases: [], status:'active', ...data }; appState.projects.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = DB.projects.get(id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; },
+    delete: (id) => { appState.projects = appState.projects.filter(p => p.id !== id); saveState(); }
+  },
+  phases: {
+    list: () => appState.phases,
+    forProject: (projectId) => appState.phases.filter(ph => ph.projectId === projectId),
+    create: (data) => { const rec = { id: uid('ph'), progress:0, ...data }; appState.phases.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = appState.phases.find(p=>p.id===id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; }
+  },
+  financialClaims: {
+    list: () => appState.financialClaims,
+    forProfile: (id) => appState.financialClaims.filter(c => c.profileId === id),
+    create: (data) => { const rec = { id: uid('clm'), status:'pending', date: Date.now(), ...data }; appState.financialClaims.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = appState.financialClaims.find(c=>c.id===id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; }
+  },
+  hrTickets: {
+    list: () => appState.hrTickets,
+    forProfile: (id) => appState.hrTickets.filter(t => t.profileId === id),
+    create: (data) => { const rec = { id: uid('tkt'), status:'open', date: Date.now(), ...data }; appState.hrTickets.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = appState.hrTickets.find(t=>t.id===id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; }
+  },
+  announcements: {
+    list: () => appState.announcements.sort((a,b)=>b.date-a.date),
+    create: (data) => { const rec = { id: uid('ann'), date: Date.now(), ...data }; appState.announcements.push(rec); saveState(); return rec; },
+    delete: (id) => { appState.announcements = appState.announcements.filter(a => a.id !== id); saveState(); }
+  },
+  requirements: {
+    list: () => appState.requirements,
+    create: (data) => { const rec = { id: uid('req'), status:'pending', date: Date.now(), ...data }; appState.requirements.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = appState.requirements.find(r=>r.id===id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; }
+  },
+  leaves: {
+    list: () => appState.leaves,
+    forProfile: (id) => appState.leaves.filter(l => l.profileId === id),
+    create: (data) => { const rec = { id: uid('lv'), status:'pending', date: Date.now(), ...data }; appState.leaves.push(rec); saveState(); return rec; },
+    update: (id, patch) => { const rec = appState.leaves.find(l=>l.id===id); if(!rec) return null; Object.assign(rec, patch); saveState(); return rec; }
+  }
+};
+
+/* ---------------- session ---------------- */
+let session = null;
+function loadSession(){ try{ const raw = sessionStorage.getItem(SESSION_KEY); session = raw ? JSON.parse(raw) : null; }catch(e){ session = null; } }
+function setSession(s){ session = s; sessionStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+function clearSession(){ session = null; sessionStorage.removeItem(SESSION_KEY); }
+
+let currentView = 'overview';
+function setView(v){ currentView = v; renderDashboard(); }
+
+/* ---------------- utils ---------------- */
+function toast(msg, kind){
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + (kind||'info');
+  el.textContent = msg;
+  document.getElementById('toastRoot').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 2800);
+}
+function fmtDate(ts){ if(!ts) return '—'; const d = new Date(ts); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtTime(ts){ if(!ts) return '—'; const d = new Date(ts); return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); }
+function fmtDateTime(ts){ return fmtDate(ts) + ' · ' + fmtTime(ts); }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function initials(name){ return (name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function roleBadge(role){ return `<span class="badge badge-${role}">${role.replace('_',' ')}</span>`; }
+function currentProfile(){ if(!session) return null; if(session.synthetic) return session; return DB.profiles.get(session.profileId); }
+
+function haversineDistance(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/* ---------------- modal helpers ---------------- */
+function openModal(html){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-overlay show" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box glass-strong">
+        <div class="modal-close" onclick="closeModal()">✕</div>
+        ${html}
+      </div>
+    </div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
+
+/* =========================================================================
+   AUTH / LOGIN
+   ========================================================================= */
+function processForm(kind, formEl){
+  const fd = new FormData(formEl);
+  return Object.fromEntries(fd.entries());
+}
+
+function renderLogin(){
+  document.getElementById('appRoot').classList.remove('active');
+  document.getElementById('loginRoot').innerHTML = `
+  <div class="login-wrap">
+    <div class="login-card glass-strong">
+      <div class="login-header">
+        <div class="brand-badge login-badge">R</div>
+        <div>
+          <div class="login-title">Refftonix Drone Labs</div>
+          <div class="login-sub">Internal ERP Access</div>
+        </div>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <form id="loginForm" onsubmit="return handleLogin(event)">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="you@refftonix.com" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+      </form>
+      <div class="login-foot">Authorized personnel only · Refftonix Drone Labs © ${new Date().getFullYear()}</div>
+    </div>
+  </div>`;
+  renderDevSwitcher();
+}
+
+function handleLogin(e){
+  e.preventDefault();
+  const data = processForm('login', e.target);
+  const errEl = document.getElementById('loginError');
+  errEl.classList.remove('show');
+
+  if(data.email === 'admin123@gmail.com' && data.password === '123456789'){
+    setSession({ role:'admin', synthetic:true, id:'system-admin', fullName:'System Admin', designation:'Master Controller' });
+    bootApp();
+    return false;
+  }
+  const match = DB.profiles.list().find(p => p.email === data.email && p.password === data.password);
+  if(!match){
+    errEl.textContent = 'Invalid credentials, or this account has not been activated yet.';
+    errEl.classList.add('show');
+    return false;
+  }
+  if(!match.isActive){
+    errEl.textContent = 'This account is not yet active. Ask HR to complete onboarding.';
+    errEl.classList.add('show');
+    return false;
+  }
+  setSession({ role: match.role, profileId: match.id });
+  bootApp();
+  return false;
+}
+
+function renderDevSwitcher(){
+  document.getElementById('devSwitcher').innerHTML = `
+    <span>Dev</span>
+    <select id="devRoleSelect">
+      <option value="admin">Admin</option>
+      <option value="hr">HR</option>
+      <option value="employee">Employee</option>
+      <option value="project_head">Project Head</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="devSwitchRole()">Load</button>
+  `;
+}
+function devSwitchRole(){
+  const role = document.getElementById('devRoleSelect').value;
+  const names = { admin:'Dev Admin', hr:'Dev HR Lead', employee:'Dev Employee', project_head:'Dev Project Head' };
+  setSession({ role, synthetic:true, id:'dev-'+role, fullName:names[role], designation: role==='project_head' ? 'Project Head' : (role.charAt(0).toUpperCase()+role.slice(1)) });
+  bootApp();
+}
+
+function logout(){
+  clearSession();
+  document.getElementById('appRoot').classList.remove('active');
+  document.getElementById('appRoot').innerHTML = '';
+  renderLogin();
+}
+
+function bootApp(){
+  document.getElementById('loginRoot').innerHTML = '';
+  document.getElementById('appRoot').classList.add('active');
+  currentView = 'overview';
+  renderDashboard();
+}
+
+/* =========================================================================
+   NAV CONFIG
+   ========================================================================= */
+const NAV = {
+  admin: [
+    { id:'overview', label:'Overview', icon:'◆' },
+    { id:'profiles', label:'Profiles', icon:'◈' },
+    { id:'procurement', label:'Procurement', icon:'▣' },
+    { id:'broadcasts', label:'Broadcasts', icon:'▲' },
+    { id:'leaves_admin', label:'Leave Approvals', icon:'◷' }
+  ],
+  hr: [
+    { id:'overview', label:'Overview', icon:'◆' },
+    { id:'lifecycle', label:'Employee Lifecycle', icon:'◈' },
+    { id:'expense', label:'Expense Claims', icon:'▣' },
+    { id:'grievances', label:'Grievances', icon:'✦' },
+    { id:'dossier', label:'Work Reports', icon:'▤' },
+    { id:'hr_attendance', label:'Attendance', icon:'◷' }
+  ],
+  employee: [
+    { id:'my_profile', label:'My Profile', icon:'◆' },
+    { id:'attendance_mark', label:'Mark Attendance', icon:'◉' },
+    { id:'timeoff', label:'Time-Off & Claims', icon:'▣' },
+    { id:'projects', label:'Projects', icon:'◈' }
+  ],
+  project_head: [
+    { id:'my_profile', label:'My Profile', icon:'◆' },
+    { id:'attendance_mark', label:'Mark Attendance', icon:'◉' },
+    { id:'timeoff', label:'Time-Off & Claims', icon:'▣' },
+    { id:'projects', label:'Projects', icon:'◈' }
+  ]
+};
+const VIEW_META = {
+  overview:{title:'Overview', sub:'Snapshot of live operations'},
+  profiles:{title:'Profile CRUD Board', sub:'Corporate identity records'},
+  procurement:{title:'Procurement Overrides', sub:'Approve or reject filed equipment requests'},
+  broadcasts:{title:'Global Broadcasts', sub:'Publish mandatory notices to all accounts'},
+  leaves_admin:{title:'Executive Leave Approvals', sub:'Final say on time-off requests'},
+  lifecycle:{title:'Employee Lifecycle', sub:'Onboard, configure and offboard staff'},
+  expense:{title:'Expense Verification', sub:'TA / DA claim approvals'},
+  grievances:{title:'Grievance Tickets', sub:'Private — visible to HR only'},
+  dossier:{title:'Work Reports', sub:'Per-employee performance dossier'},
+  hr_attendance:{title:'Attendance Tracker', sub:'Clock-in logs across the org'},
+  my_profile:{title:'My Profile', sub:'Identity, role and reporting line'},
+  attendance_mark:{title:'Mark Attendance', sub:'Geofenced punch-in'},
+  timeoff:{title:'Time-Off & Claims', sub:'Leave requests and reimbursements'},
+  projects:{title:'Projects', sub:'Execution and delivery tracking'}
+};
+
+/* =========================================================================
+   MASTER RENDER
+   ========================================================================= */
+function renderDashboard(){
+  if(!session) return renderLogin();
+  const role = session.role;
+  const profile = currentProfile();
+  const navItems = NAV[role] || NAV.employee;
+  const meta = VIEW_META[currentView] || {title:'', sub:''};
+  const latestAnn = DB.announcements.list()[0];
+
+  const root = document.getElementById('appRoot');
+  root.innerHTML = `
+    <aside class="sidebar">
+      <div class="sidebar-brand brand-row">
+        <div class="brand-badge">R</div>
+        <div class="brand-word">Refftonix<small>Drone Labs</small></div>
+      </div>
+      <div class="nav-group">Navigate</div>
+      ${navItems.map(n => `
+        <div class="nav-item ${currentView===n.id?'active':''}" onclick="setView('${n.id}')">
+          <span class="nav-dot"></span>${n.label}
+        </div>`).join('')}
+      <div class="sidebar-foot">
+        <div class="role-pill">${role.replace('_',' ')}</div>
+      </div>
+    </aside>
+    <div class="main">
+      ${latestAnn ? `<div class="announce-bar"><b>📣 ${esc(latestAnn.author||'Admin')}:</b> ${esc(latestAnn.text)}</div>` : ''}
+      <div class="topbar">
+        <div>
+          <div class="view-title">${meta.title}</div>
+          <div class="view-sub">${meta.sub}</div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-chip glass">
+            <div class="user-avatar">${initials(profile ? (profile.fullName) : '?')}</div>
+            <div>
+              <div class="user-chip-name">${esc(profile ? profile.fullName : 'Unknown')}</div>
+              <div class="user-chip-role">${esc(profile ? (profile.designation||role) : role)}</div>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">Log Out</button>
+        </div>
+      </div>
+      <div class="content" id="viewContent"></div>
+    </div>
+  `;
+  renderView();
+  renderDevSwitcher();
+}
+
+function renderView(){
+  const el = document.getElementById('viewContent');
+  const role = session.role;
+  const map = {
+    overview: () => role==='admin' ? viewAdminOverview() : viewHrOverview(),
+    profiles: viewAdminProfiles,
+    procurement: viewAdminProcurement,
+    broadcasts: viewAdminBroadcasts,
+    leaves_admin: viewAdminLeaves,
+    lifecycle: viewHrLifecycle,
+    expense: viewHrExpense,
+    grievances: viewHrGrievances,
+    dossier: viewHrDossier,
+    hr_attendance: viewHrAttendance,
+    my_profile: viewMyProfile,
+    attendance_mark: viewAttendanceMark,
+    timeoff: viewTimeoff,
+    projects: viewProjects
+  };
+  const fn = map[currentView];
+  el.innerHTML = fn ? fn() : emptyState('Not found', 'This view does not exist yet.');
+  afterViewRender();
+}
+function afterViewRender(){
+  if(currentView === 'attendance_mark') initRadar();
+}
+
+function emptyState(title, sub, cta){
+  return `<div class="glass panel empty-state">
+    <div class="empty-icon">◌</div>
+    <div style="font-weight:600;font-size:14px;margin-bottom:4px;color:var(--text-hi);">${esc(title)}</div>
+    <p>${esc(sub)}</p>
+    ${cta || ''}
+  </div>`;
+}
+
+/* =========================================================================
+   ADMIN — OVERVIEW
+   ========================================================================= */
+function viewAdminOverview(){
+  const profiles = DB.profiles.list();
+  const pendingReq = DB.requirements.list().filter(r=>r.status==='pending').length;
+  const pendingLeave = DB.leaves.list().filter(l=>l.status==='pending').length;
+  const active = profiles.filter(p=>p.isActive).length;
+  return `
+  <div class="stat-grid">
+    <div class="glass stat-card"><div class="stat-num">${profiles.length}</div><div class="stat-label">Total Profiles</div></div>
+    <div class="glass stat-card"><div class="stat-num">${active}</div><div class="stat-label">Active Accounts</div></div>
+    <div class="glass stat-card"><div class="stat-num">${pendingReq}</div><div class="stat-label">Pending Procurement</div></div>
+    <div class="glass stat-card"><div class="stat-num">${pendingLeave}</div><div class="stat-label">Pending Leave Requests</div></div>
+    <div class="glass stat-card"><div class="stat-num">${DB.projects.list().length}</div><div class="stat-label">Active Projects</div></div>
+  </div>
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">Recent Broadcasts</div></div>
+    ${DB.announcements.list().length===0 ? emptyState('No broadcasts yet','Publish a corporate notice from the Broadcasts tab.') :
+      DB.announcements.list().slice(0,5).map(a=>`<div style="padding:10px 0;border-top:1px solid var(--glass-border);font-size:13px;"><b>${esc(a.author||'Admin')}</b> · <span class="mono" style="color:var(--text-low);font-size:11px;">${fmtDate(a.date)}</span><div style="margin-top:4px;color:var(--text-mid);">${esc(a.text)}</div></div>`).join('')}
+  </div>`;
+}
+
+/* =========================================================================
+   ADMIN — PROFILES (Full CRUD + ID Card)
+   ========================================================================= */
+function viewAdminProfiles(){
+  const profiles = DB.profiles.list();
+  return `
+  <div class="glass panel">
+    <div class="panel-head">
+      <div class="panel-title">Corporate Records<span>${profiles.length} personnel on file</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="syncProfilesFromSupabase()">↻ Sync</button>
+        <button class="btn btn-primary btn-sm" onclick="openCreateProfileModal()">+ Add Profile</button>
+      </div>
+    </div>
+    ${profiles.length===0 ? emptyState('No entries recorded.', "Click 'Add' to begin.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${profiles.map(p => `
+        <tr>
+          <td><b>${esc(p.fullName)}</b></td>
+          <td class="mono" style="font-size:12px;color:var(--text-mid);">${esc(p.email||'—')}</td>
+          <td>
+            <select onchange="updateProfileRole('${p.id}', this.value)" style="background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);color:var(--text-hi);padding:5px 8px;border-radius:7px;font-size:12px;">
+              ${['admin','hr','employee','project_head'].map(r=>`<option value="${r}" ${p.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('')}
+            </select>
+          </td>
+          <td>${p.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>'}</td>
+          <td>
+            <button class="pill-btn gold" onclick="openIdCardModal('${p.id}')">ID Card</button>
+            <button class="pill-btn danger" onclick="deleteProfile('${p.id}')">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+function openCreateProfileModal(){
+  openModal(`
+    <div class="modal-title">Add Personnel Profile</div>
+    <form onsubmit="return submitCreateProfile(event)">
+      <div class="field"><label>Full Name</label><input name="fullName" required placeholder="e.g. Ananya Rao"></div>
+      <div class="field"><label>Email</label><input type="email" name="email" required placeholder="name@refftonix.com"></div>
+      <div class="field"><label>Login Password</label><input type="password" name="password" required placeholder="Set an initial password"></div>
+      <div class="field"><label>Initial Role</label>
+        <select name="role">
+          <option value="employee">Employee</option>
+          <option value="project_head">Project Head</option>
+          <option value="hr">HR</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Create Profile</button>
+    </form>`);
+}
+async function submitCreateProfile(e){
+  e.preventDefault();
+  const d = processForm('create-profile', e.target);
+  try{
+    const rec = await DB.profiles.create({ fullName:d.fullName, email:d.email, password:d.password, role:d.role, isActive:true, designation: d.role.replace('_',' ') });
+    closeModal(); renderView();
+    toast('Profile created — ID card ready', 'success');
+    openIdCardModal(rec.id);
+  }catch(err){ /* toast already shown by DB layer */ }
+  return false;
+}
+async function deleteProfile(id){
+  if(!confirm('Permanently erase this personnel profile?')) return;
+  try{
+    await DB.profiles.delete(id);
+    renderView();
+    toast('Profile deleted', 'error');
+  }catch(err){ /* toast already shown by DB layer */ }
+}
+async function updateProfileRole(id, role){
+  try{
+    await DB.profiles.update(id, { role });
+    renderView();
+    toast('Role updated', 'success');
+  }catch(err){ renderView(); }
+}
+async function syncProfilesFromSupabase(){
+  await DB.profiles.refresh();
+  renderView();
+  toast('Synced from Supabase', 'success');
+}
+function openIdCardModal(id){
+  const p = DB.profiles.get(id);
+  if(!p) return;
+  openModal(`
+    <div class="modal-title">Digital I.D. Pass</div>
+    <div style="display:flex;justify-content:center;">
+      <div class="id-card" id="idCardCanvas">
+        <div class="id-card-top">
+          <div class="brand-badge" style="width:34px;height:34px;font-size:15px;">R</div>
+          <div style="font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-low);">Refftonix<br>Drone Labs</div>
+        </div>
+        <div class="id-card-name">${esc(p.fullName)}</div>
+        <div class="id-card-role">${esc((p.designation||p.role).replace('_',' '))}</div>
+        <div class="id-card-meta">
+          <div><span>Employee ID</span><span>${p.id.toUpperCase()}</span></div>
+          <div><span>Email</span><span>${esc(p.email||'—')}</span></div>
+          <div><span>Status</span><span>${p.isActive?'ACTIVE':'PENDING'}</span></div>
+          <div><span>Issued</span><span>${fmtDate(p.createdAt)}</span></div>
+        </div>
+        <div class="id-card-strip"></div>
+      </div>
+    </div>
+    <button class="btn btn-gold btn-block" style="margin-top:18px;" onclick="downloadIdCard()">Download as PNG</button>
+  `);
+}
+function downloadIdCard(){
+  const node = document.getElementById('idCardCanvas');
+  if(!window.html2canvas){ toast('Image export unavailable offline','error'); return; }
+  html2canvas(node, {backgroundColor:null, scale:2}).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'refftonix-id-card.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+/* =========================================================================
+   ADMIN — PROCUREMENT OVERRIDES
+   ========================================================================= */
+function viewAdminProcurement(){
+  const reqs = DB.requirements.list();
+  return `
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">Filed Requirements<span>Equipment and asset requests from Project Heads</span></div></div>
+    ${reqs.length===0 ? emptyState('No entries recorded.', "Requirements filed by Project Heads will appear here.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Reason</th><th>Project</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${reqs.map(r => {
+        const proj = DB.projects.get(r.projectId);
+        return `<tr>
+          <td><b>${esc(r.item)}</b></td>
+          <td>${esc(r.qty)}</td>
+          <td style="color:var(--text-mid);">${esc(r.reason)}</td>
+          <td>${esc(proj ? proj.name : '—')}</td>
+          <td><span class="badge badge-${r.status}">${r.status}</span></td>
+          <td>${r.status==='pending' ? `
+            <button class="pill-btn" onclick="DB.requirements.update('${r.id}',{status:'approved'}); renderView(); toast('Approved','success')">Approve</button>
+            <button class="pill-btn danger" onclick="DB.requirements.update('${r.id}',{status:'rejected'}); renderView(); toast('Rejected','error')">Reject</button>
+          ` : '—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
+/* =========================================================================
+   ADMIN — BROADCASTS
+   ========================================================================= */
+function viewAdminBroadcasts(){
+  const anns = DB.announcements.list();
+  return `
+  <div class="grid-2">
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:16px;">Publish Notice</div>
+      <form onsubmit="return submitAnnouncement(event)">
+        <div class="field"><label>Message</label><textarea name="text" rows="4" required placeholder="Mandatory notice shown to every account..."></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Publish to All Accounts</button>
+      </form>
+    </div>
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:16px;">Live Broadcasts</div>
+      ${anns.length===0 ? emptyState('No entries recorded.', "Nothing published yet.") :
+        anns.map(a=>`<div style="padding:10px 0;border-top:1px solid var(--glass-border);display:flex;justify-content:space-between;gap:10px;">
+          <div><div style="font-size:13px;">${esc(a.text)}</div><div class="mono" style="font-size:10.5px;color:var(--text-low);margin-top:4px;">${fmtDateTime(a.date)}</div></div>
+          <button class="pill-btn danger" onclick="DB.announcements.delete('${a.id}'); renderView();">Remove</button>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+function submitAnnouncement(e){
+  e.preventDefault();
+  const d = processForm('ann', e.target);
+  DB.announcements.create({ text:d.text, author: currentProfile()?.fullName || 'Admin' });
+  e.target.reset();
+  renderView();
+  toast('Broadcast published','success');
+  return false;
+}
+
+/* =========================================================================
+   ADMIN — LEAVE APPROVALS (Executive Override)
+   ========================================================================= */
+function viewAdminLeaves(){
+  const leaves = DB.leaves.list();
+  return `
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">Time-Off Requests<span>Final executive approval</span></div></div>
+    ${leaves.length===0 ? emptyState('No entries recorded.', "Employee leave requests will land here.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Dates</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${leaves.map(l => {
+        const p = DB.profiles.get(l.profileId);
+        return `<tr>
+          <td><b>${esc(p?p.fullName:'Unknown')}</b></td>
+          <td class="mono" style="font-size:12px;">${esc(l.start)} → ${esc(l.end)}</td>
+          <td style="color:var(--text-mid);">${esc(l.reason)}</td>
+          <td><span class="badge badge-${l.status}">${l.status}</span></td>
+          <td>${l.status==='pending' ? `
+            <button class="pill-btn" onclick="DB.leaves.update('${l.id}',{status:'approved'}); renderView(); toast('Approved','success')">Approve</button>
+            <button class="pill-btn danger" onclick="DB.leaves.update('${l.id}',{status:'rejected'}); renderView(); toast('Rejected','error')">Reject</button>
+          ` : '—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
+/* =========================================================================
+   HR — OVERVIEW
+   ========================================================================= */
+function viewHrOverview(){
+  const profiles = DB.profiles.list().filter(p=>p.role!=='admin');
+  const drafts = profiles.filter(p=>!p.isActive).length;
+  const openTickets = DB.hrTickets.list().filter(t=>t.status==='open').length;
+  const pendingClaims = DB.financialClaims.list().filter(c=>c.status==='pending').length;
+  return `
+  <div class="stat-grid">
+    <div class="glass stat-card"><div class="stat-num">${profiles.length}</div><div class="stat-label">Managed Staff</div></div>
+    <div class="glass stat-card"><div class="stat-num">${drafts}</div><div class="stat-label">Pending Activation</div></div>
+    <div class="glass stat-card"><div class="stat-num">${openTickets}</div><div class="stat-label">Open Grievances</div></div>
+    <div class="glass stat-card"><div class="stat-num">${pendingClaims}</div><div class="stat-label">Pending TA/DA Claims</div></div>
+  </div>
+  ${emptyState('Use the sidebar','Jump into Employee Lifecycle, Attendance, or Expense Claims to get moving.')}
+  `;
+}
+
+/* =========================================================================
+   HR — EMPLOYEE LIFECYCLE
+   ========================================================================= */
+function viewHrLifecycle(){
+  const profiles = DB.profiles.list().filter(p=>p.role!=='admin');
+  return `
+  <div class="glass panel">
+    <div class="panel-head">
+      <div class="panel-title">Employee Register<span>${profiles.length} records</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="syncProfilesFromSupabase()">↻ Sync</button>
+        <button class="btn btn-primary btn-sm" onclick="openDraftModal()">+ Add Draft Employee</button>
+      </div>
+    </div>
+    ${profiles.length===0 ? emptyState('No entries recorded.', "Click 'Add' to begin.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Role</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${profiles.map(p => `
+        <tr>
+          <td><b>${esc(p.fullName)}</b><div style="font-size:11px;color:var(--text-low);">${esc(p.email||'no email set')}</div></td>
+          <td>${roleBadge(p.role)}</td>
+          <td>${p.workLocation ? esc(GEOFENCE_ANCHORS[p.workLocation].name) : '—'}</td>
+          <td>${p.isActive ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-pending">Draft</span>'}</td>
+          <td>
+            <button class="pill-btn" onclick="openConfigureModal('${p.id}')">${p.isActive?'Edit':'Configure & Activate'}</button>
+            <button class="pill-btn danger" onclick="terminateProfile('${p.id}')">Terminate</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+function openDraftModal(){
+  openModal(`
+    <div class="modal-title">Add Draft Employee</div>
+    <form onsubmit="return submitDraft(event)">
+      <div class="field"><label>Full Name</label><input name="fullName" required placeholder="Full legal name"></div>
+      <div class="field"><label>Email</label><input type="email" name="email" required placeholder="name@refftonix.com"></div>
+      <div class="field"><label>Track</label>
+        <select name="role"><option value="employee">Employee</option><option value="project_head">Project Head</option></select>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Save Draft</button>
+    </form>`);
+}
+async function submitDraft(e){
+  e.preventDefault();
+  const d = processForm('draft', e.target);
+  try{
+    await DB.profiles.create({ fullName:d.fullName, email:d.email, role:d.role, isActive:false });
+    closeModal(); renderView();
+    toast('Draft profile added — not yet active','info');
+  }catch(err){ /* toast already shown */ }
+  return false;
+}
+function openConfigureModal(id){
+  const p = DB.profiles.get(id);
+  openModal(`
+    <div class="modal-title">Configure Employee</div>
+    <form onsubmit="return submitConfigure(event,'${id}')">
+      <div class="field"><label>Full Name</label><input name="fullName" required value="${esc(p.fullName)}"></div>
+      <div class="form-row">
+        <div class="field"><label>Designation</label><input name="designation" value="${esc(p.designation||'')}" placeholder="e.g. Firmware Engineer"></div>
+        <div class="field"><label>Base Compensation (₹/mo)</label><input type="number" name="baseSalary" value="${p.baseSalary||''}" placeholder="45000"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Shift Start</label><input type="time" name="shiftStart" value="${p.shiftStart||'09:30'}"></div>
+        <div class="field"><label>Shift End</label><input type="time" name="shiftEnd" value="${p.shiftEnd||'18:30'}"></div>
+      </div>
+      <div class="field"><label>Geofence Location</label>
+        <select name="workLocation">
+          <option value="reffto" ${p.workLocation==='reffto'?'selected':''}>Reffto Office</option>
+          <option value="lnct" ${p.workLocation==='lnct'?'selected':''}>LNCT Campus</option>
+        </select>
+      </div>
+      ${!p.isActive ? `<div class="field"><label>Set Login Password</label><input type="password" name="password" required placeholder="Employee will use this to log in"></div>` : ''}
+      <button class="btn ${p.isActive?'btn-primary':'btn-gold'} btn-block" type="submit">${p.isActive ? 'Save Changes' : 'Save & Activate'}</button>
+    </form>`);
+}
+async function submitConfigure(e, id){
+  e.preventDefault();
+  const d = processForm('configure', e.target);
+  const p = DB.profiles.get(id);
+  const wasActive = p.isActive;
+  const patch = { fullName:d.fullName, designation:d.designation, baseSalary:Number(d.baseSalary)||0, shiftStart:d.shiftStart, shiftEnd:d.shiftEnd, workLocation:d.workLocation };
+  if(!wasActive){ patch.password = d.password; patch.isActive = true; }
+  try{
+    await DB.profiles.update(id, patch);
+    closeModal(); renderView();
+    if(!wasActive){
+      toast('Activated — offer letter ready','success');
+      openOfferLetter(id);
+    } else {
+      toast('Employee updated','success');
+    }
+  }catch(err){ /* toast already shown */ }
+  return false;
+}
+async function terminateProfile(id){
+  if(!confirm('Terminate this account and purge user data?')) return;
+  try{
+    await DB.profiles.delete(id);
+    renderView();
+    toast('Account terminated','error');
+  }catch(err){ /* toast already shown */ }
+}
+function openOfferLetter(id){
+  const p = DB.profiles.get(id);
+  openModal(`
+    <div class="modal-title">Offer Letter</div>
+    <div id="printArea">
+      <div class="offer-letter">
+        <div class="ol-head">
+          <div><h2>Refftonix Drone Labs</h2><div style="font-size:11px;color:#777;">Internal ERP · Offer Confirmation</div></div>
+          <div style="font-size:11px;color:#999;">${fmtDate(Date.now())}</div>
+        </div>
+        <p>Dear ${esc(p.fullName)},</p>
+        <p>We are pleased to confirm your engagement with Refftonix Drone Labs as <b>${esc(p.designation||p.role.replace('_',' '))}</b>. This letter formalizes the terms configured for your onboarding.</p>
+        <table>
+          <tr><th>Field</th><th>Detail</th></tr>
+          <tr><td>Full Name</td><td>${esc(p.fullName)}</td></tr>
+          <tr><td>Designation</td><td>${esc(p.designation||'—')}</td></tr>
+          <tr><td>Base Compensation</td><td>₹${Number(p.baseSalary||0).toLocaleString('en-IN')} / month</td></tr>
+          <tr><td>Shift Hours</td><td>${esc(p.shiftStart||'—')} – ${esc(p.shiftEnd||'—')}</td></tr>
+          <tr><td>Workplace</td><td>${p.workLocation ? esc(GEOFENCE_ANCHORS[p.workLocation].name) : '—'}</td></tr>
+        </table>
+        <p>Please report to the above workplace at the confirmed shift start time. This letter is generated by the Refftonix internal ERP and does not require a physical signature to take effect within the system.</p>
+        <p style="margin-top:24px;">Warm regards,<br><b>People Operations</b><br>Refftonix Drone Labs</p>
+      </div>
+    </div>
+    <button class="btn btn-gold btn-block" style="margin-top:16px;" onclick="window.print()">Print Offer Letter</button>
+  `);
+}
+
+/* =========================================================================
+   HR — EXPENSE VERIFICATION
+   ========================================================================= */
+function viewHrExpense(){
+  const claims = DB.financialClaims.list();
+  return `
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">TA / DA Claims<span>${claims.length} filed</span></div></div>
+    ${claims.length===0 ? emptyState('No entries recorded.', "Employee reimbursement claims will appear here.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Type</th><th>Amount</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${claims.map(c => {
+        const p = DB.profiles.get(c.profileId);
+        return `<tr>
+          <td><b>${esc(p?p.fullName:'Unknown')}</b></td>
+          <td>${esc(c.type)}</td>
+          <td class="mono">₹${Number(c.amount).toLocaleString('en-IN')}</td>
+          <td style="color:var(--text-mid);">${esc(c.reason)}</td>
+          <td><span class="badge badge-${c.status}">${c.status}</span></td>
+          <td>${c.status==='pending' ? `
+            <button class="pill-btn" onclick="DB.financialClaims.update('${c.id}',{status:'approved'}); renderView(); toast('Approved','success')">Approve</button>
+            <button class="pill-btn danger" onclick="DB.financialClaims.update('${c.id}',{status:'rejected'}); renderView(); toast('Rejected','error')">Reject</button>
+          ` : '—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
+/* =========================================================================
+   HR — GRIEVANCES (private)
+   ========================================================================= */
+function viewHrGrievances(){
+  const tickets = DB.hrTickets.list();
+  return `
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">Private Grievance Grid<span>Visible to HR only</span></div></div>
+    ${tickets.length===0 ? emptyState('No entries recorded.', "Employee grievances will land here, kept private from other roles.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Message</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      ${tickets.map(t => {
+        const p = DB.profiles.get(t.profileId);
+        return `<tr>
+          <td><b>${esc(p?p.fullName:'Unknown')}</b><div class="mono" style="font-size:10.5px;color:var(--text-low);">${fmtDate(t.date)}</div></td>
+          <td style="color:var(--text-mid);max-width:280px;">${esc(t.message)}${t.response ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--glass-border);color:var(--gold-light);font-size:12px;">HR: ${esc(t.response)}</div>` : ''}</td>
+          <td><span class="badge badge-${t.status==='resolved'?'approved':'pending'}">${t.status}</span></td>
+          <td>${t.status==='open' ? `<button class="pill-btn" onclick="openRespondModal('${t.id}')">Respond</button>` : '—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+function openRespondModal(id){
+  openModal(`
+    <div class="modal-title">Respond to Grievance</div>
+    <form onsubmit="return submitRespond(event,'${id}')">
+      <div class="field"><label>Response</label><textarea name="response" rows="4" required placeholder="Your reply..."></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Send & Mark Resolved</button>
+    </form>`);
+}
+function submitRespond(e, id){
+  e.preventDefault();
+  const d = processForm('respond', e.target);
+  DB.hrTickets.update(id, { response:d.response, status:'resolved' });
+  closeModal(); renderView();
+  toast('Response sent','success');
+  return false;
+}
+
+/* =========================================================================
+   HR — WORK REPORT / DOSSIER
+   ========================================================================= */
+function viewHrDossier(){
+  const profiles = DB.profiles.list().filter(p=>p.role!=='admin');
+  return `
+  <div class="glass panel">
+    <div class="panel-head"><div class="panel-title">Work Report Directory<span>Click a profile to open its dossier</span></div></div>
+    ${profiles.length===0 ? emptyState('No entries recorded.', "Profiles will appear here once added.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Role</th><th>Attendance Logs</th><th>Claims Filed</th><th></th></tr></thead>
+      <tbody>
+      ${profiles.map(p => `
+        <tr>
+          <td><b>${esc(p.fullName)}</b></td>
+          <td>${roleBadge(p.role)}</td>
+          <td>${DB.attendance.forProfile(p.id).length}</td>
+          <td>${DB.financialClaims.forProfile(p.id).length}</td>
+          <td><button class="pill-btn" onclick="openDossier('${p.id}')">Open Dossier</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+function openDossier(id){
+  const p = DB.profiles.get(id);
+  const att = DB.attendance.forProfile(id);
+  const claims = DB.financialClaims.forProfile(id);
+  openModal(`
+    <div class="modal-title">Performance Dossier</div>
+    <div id="printArea">
+      <div class="offer-letter">
+        <div class="ol-head"><div><h2>${esc(p.fullName)}</h2><div style="font-size:11px;color:#777;">${esc((p.designation||p.role).replace('_',' '))}</div></div></div>
+        <p><b>Attendance</b> — ${att.length} recorded punches, ${att.filter(a=>a.valid).length} valid.</p>
+        <table><tr><th>Date</th><th>Location</th><th>Distance</th><th>Result</th></tr>
+        ${att.slice(-8).map(a=>`<tr><td>${fmtDateTime(a.timestamp)}</td><td>${esc(GEOFENCE_ANCHORS[a.location]?.name||a.location)}</td><td>${Math.round(a.distance)}m</td><td>${a.valid?'Valid':'Out of range'}</td></tr>`).join('') || '<tr><td colspan="4">No records</td></tr>'}
+        </table>
+        <p style="margin-top:16px;"><b>Reimbursement Claims</b> — ${claims.length} filed.</p>
+        <table><tr><th>Type</th><th>Amount</th><th>Status</th></tr>
+        ${claims.map(c=>`<tr><td>${c.type}</td><td>₹${Number(c.amount).toLocaleString('en-IN')}</td><td>${c.status}</td></tr>`).join('') || '<tr><td colspan="3">No claims</td></tr>'}
+        </table>
+      </div>
+    </div>
+    <button class="btn btn-gold btn-block" style="margin-top:16px;" onclick="window.print()">Print Dossier</button>
+  `);
+}
+
+/* =========================================================================
+   HR — ATTENDANCE TRACKER
+   ========================================================================= */
+function viewHrAttendance(){
+  const logs = [...DB.attendance.list()].sort((a,b)=>b.timestamp-a.timestamp);
+  const hrProfile = currentProfile();
+  return `
+  <div class="glass panel">
+    <div class="panel-head">
+      <div class="panel-title">Org-Wide Clock-In Logs<span>${logs.length} entries</span></div>
+      <button class="btn btn-gold btn-sm" onclick="setView('attendance_mark')">Mark My Attendance</button>
+    </div>
+    ${logs.length===0 ? emptyState('No entries recorded.', "Attendance punches will appear here as staff clock in.") : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Timestamp</th><th>Location</th><th>Distance</th><th>Result</th></tr></thead>
+      <tbody>
+      ${logs.map(a => {
+        const p = DB.profiles.get(a.profileId);
+        return `<tr>
+          <td><b>${esc(p?p.fullName:(a.profileId||'Unknown'))}</b></td>
+          <td class="mono" style="font-size:12px;">${fmtDateTime(a.timestamp)}</td>
+          <td>${esc(GEOFENCE_ANCHORS[a.location]?.name || a.location)}</td>
+          <td class="mono">${Math.round(a.distance)}m</td>
+          <td>${a.valid ? '<span class="badge badge-active">Valid</span>' : '<span class="badge badge-rejected">Out of Range</span>'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
+/* =========================================================================
+   EMPLOYEE / PROJECT HEAD — MY PROFILE
+   ========================================================================= */
+function viewMyProfile(){
+  const p = currentProfile();
+  if(!p) return emptyState('No profile found','Contact HR to be added to the system.');
+  const isPH = session.role === 'project_head';
+  const myProjects = DB.projects.list().filter(pr => pr.teamIds.includes(p.id) || pr.headId === p.id);
+  const team = isPH ? DB.profiles.list().filter(e => e.managerId === p.id) : [];
+  const manager = p.managerId ? DB.profiles.get(p.managerId) : null;
+
+  return `
+  <div class="grid-2">
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:14px;">Identity</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div class="user-avatar" style="width:52px;height:52px;font-size:18px;">${initials(p.fullName)}</div>
+        <div>
+          <div style="font-weight:700;font-size:16px;">${esc(p.fullName)}</div>
+          <div style="color:var(--text-low);font-size:12.5px;">${esc(p.designation || session.role.replace('_',' '))}</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:13px;color:var(--text-mid);line-height:2;">
+        <div>Location: <b style="color:var(--text-hi);">${p.workLocation ? esc(GEOFENCE_ANCHORS[p.workLocation].name) : 'Not set'}</b></div>
+        <div>Shift: <b style="color:var(--text-hi);">${esc(p.shiftStart||'—')} – ${esc(p.shiftEnd||'—')}</b></div>
+        ${manager ? `<div>Reports to: <b style="color:var(--text-hi);">${esc(manager.fullName)}</b></div>` : ''}
+      </div>
+    </div>
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:14px;">Active Project Phases</div>
+      ${myProjects.length===0 ? emptyState('No entries recorded.', "You are not yet assigned to a project.") :
+        myProjects.map(pr => {
+          const phases = DB.phases.forProject(pr.id);
+          return `<div style="margin-bottom:14px;">
+            <div style="font-weight:600;font-size:13.5px;margin-bottom:6px;">${esc(pr.name)}</div>
+            ${phases.length===0 ? '<div style="font-size:12px;color:var(--text-low);">No phases defined yet</div>' :
+              phases.map(ph=>`<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-mid);margin-bottom:4px;"><span>${esc(ph.name)}</span><span>${ph.progress}%</span></div><div class="progress-track"><div class="progress-fill" style="width:${ph.progress}%;"></div></div></div>`).join('')}
+          </div>`;
+        }).join('')}
+    </div>
+  </div>
+  ${isPH ? `
+  <div class="glass panel">
+    <div class="panel-title" style="margin-bottom:10px;">My Team</div>
+    ${team.length===0 ? emptyState('No entries recorded.', "No sub-interns assigned beneath you yet.") :
+      team.map(m => `
+      <div class="accordion-item">
+        <div class="accordion-head" onclick="this.nextElementSibling.classList.toggle('open')">
+          <span>${esc(m.fullName)} <span style="color:var(--text-low);font-weight:400;">— ${esc(m.designation||m.role)}</span></span>
+          <span>▾</span>
+        </div>
+        <div class="accordion-body">
+          Email: ${esc(m.email||'—')} · Location: ${m.workLocation?esc(GEOFENCE_ANCHORS[m.workLocation].name):'—'}<br>
+          Attendance logs: ${DB.attendance.forProfile(m.id).length}
+        </div>
+      </div>`).join('')}
+  </div>` : ''}
+  `;
+}
+
+/* =========================================================================
+   EMPLOYEE — MARK ATTENDANCE (Geofence + Radar)
+   ========================================================================= */
+function viewAttendanceMark(){
+  const p = currentProfile();
+  const anchor = GEOFENCE_ANCHORS[p?.workLocation || 'reffto'];
+  return `
+  <div class="glass panel" style="max-width:520px;margin:0 auto;">
+    <div class="panel-title" style="text-align:center;margin-bottom:4px;">${esc(anchor.name)}</div>
+    <div style="text-align:center;font-size:11.5px;color:var(--text-low);margin-bottom:6px;">Geofence radius: ${GEOFENCE_RADIUS_M}m</div>
+    <div class="radar-wrap">
+      <div class="radar" id="radarEl">
+        <div class="radar-ring" style="width:100%;height:100%;top:0;left:0;"></div>
+        <div class="radar-ring" style="width:66%;height:66%;top:17%;left:17%;"></div>
+        <div class="radar-ring" style="width:33%;height:33%;top:33.5%;left:33.5%;"></div>
+        <div class="radar-center"></div>
+        <div class="radar-sweep"></div>
+        <div class="radar-user" id="radarUser" style="display:none;"></div>
+      </div>
+      <div class="radar-status" id="radarStatus">
+        <div class="dist">—</div>
+        <div class="label">Awaiting location</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="runGeofenceCheck()">Mark Attendance</button>
+    <div class="alert" id="geoAlert"></div>
+  </div>
+  <div class="glass panel" style="max-width:520px;margin:20px auto 0;">
+    <div class="panel-title" style="margin-bottom:10px;">My Recent Punches</div>
+    ${DB.attendance.forProfile(p?p.id:'').length===0 ? emptyState('No entries recorded.', "Your clock-ins will appear here.") :
+      [...DB.attendance.forProfile(p.id)].sort((a,b)=>b.timestamp-a.timestamp).slice(0,6).map(a=>`
+      <div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--glass-border);font-size:12.5px;">
+        <span class="mono">${fmtDateTime(a.timestamp)}</span>
+        <span>${a.valid ? '<span class="badge badge-active">Valid</span>' : '<span class="badge badge-rejected">Out of Range</span>'}</span>
+      </div>`).join('')}
+  </div>`;
+}
+function initRadar(){ /* radar sweep animates via CSS only; user dot placed after geolocation resolves */ }
+
+function runGeofenceCheck(){
+  const p = currentProfile();
+  const alertEl = document.getElementById('geoAlert');
+  alertEl.className = 'alert';
+  if(!navigator.geolocation){
+    alertEl.textContent = 'Geolocation is not supported on this device.';
+    alertEl.classList.add('show','alert-danger');
+    return;
+  }
+  const anchorKey = p?.workLocation || 'reffto';
+  const anchor = GEOFENCE_ANCHORS[anchorKey];
+
+  navigator.geolocation.getCurrentPosition(function(position){
+    const { latitude, longitude } = position.coords;
+    const distance = haversineDistance(latitude, longitude, anchor.lat, anchor.lng);
+    updateRadarUI(distance);
+
+    const isValid = distance <= GEOFENCE_RADIUS_M;
+    DB.attendance.create({
+      profileId: p.id,
+      timestamp: Date.now(),
+      location: anchorKey,
+      distance: distance,
+      valid: isValid
+    });
+
+    if(isValid){
+      alertEl.textContent = `Checked in — ${Math.round(distance)}m from ${anchor.name}.`;
+      alertEl.classList.add('show','alert-success');
+      toast('Attendance marked','success');
+    } else {
+      alertEl.textContent = `Check-in locked — you are ${Math.round(distance)}m from ${anchor.name}, outside the ${GEOFENCE_RADIUS_M}m geofence.`;
+      alertEl.classList.add('show','alert-danger');
+      toast('Outside geofence range','error');
+    }
+    renderView();
+  }, function(err){
+    alertEl.textContent = 'Could not read your location: ' + err.message;
+    alertEl.classList.add('show','alert-danger');
+  }, { enableHighAccuracy:true, timeout:10000 });
+}
+function updateRadarUI(distance){
+  const dot = document.getElementById('radarUser');
+  const status = document.getElementById('radarStatus');
+  if(!dot || !status) return;
+  const inside = distance <= GEOFENCE_RADIUS_M;
+  const clamped = Math.min(distance / 400, 1);
+  const angle = Math.random() * Math.PI * 2;
+  const r = clamped * 46;
+  const x = 50 + r * Math.cos(angle);
+  const y = 50 + r * Math.sin(angle);
+  dot.style.display = 'block';
+  dot.style.left = x + '%';
+  dot.style.top = y + '%';
+  dot.className = 'radar-user ' + (inside ? 'inside' : 'outside');
+  status.querySelector('.dist').textContent = Math.round(distance) + 'm';
+  status.querySelector('.label').textContent = inside ? 'Inside geofence' : 'Outside geofence';
+}
+
+/* =========================================================================
+   EMPLOYEE — TIME-OFF & CLAIMS
+   ========================================================================= */
+function viewTimeoff(){
+  const p = currentProfile();
+  const myLeaves = p ? DB.leaves.forProfile(p.id) : [];
+  const myClaims = p ? DB.financialClaims.forProfile(p.id) : [];
+  return `
+  <div class="grid-2">
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:14px;">Request Time Off</div>
+      <form onsubmit="return submitLeave(event)">
+        <div class="form-row">
+          <div class="field"><label>From</label><input type="date" name="start" required></div>
+          <div class="field"><label>To</label><input type="date" name="end" required></div>
+        </div>
+        <div class="field"><label>Reason</label><textarea name="reason" rows="3" required placeholder="Reason for leave"></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Submit Request</button>
+      </form>
+      <div class="divider"></div>
+      ${myLeaves.length===0 ? emptyState('No entries recorded.', "Your leave requests will appear here.") :
+        myLeaves.map(l=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--glass-border);font-size:12.5px;"><span>${esc(l.start)} → ${esc(l.end)}</span><span class="badge badge-${l.status}">${l.status}</span></div>`).join('')}
+    </div>
+    <div class="glass panel">
+      <div class="panel-title" style="margin-bottom:14px;">File TA / DA Claim</div>
+      <form onsubmit="return submitClaim(event)">
+        <div class="form-row">
+          <div class="field"><label>Type</label><select name="type"><option value="TA">Travel Allowance</option><option value="DA">Daily Allowance</option></select></div>
+          <div class="field"><label>Amount (₹)</label><input type="number" name="amount" required placeholder="1200"></div>
+        </div>
+        <div class="field"><label>Reason</label><textarea name="reason" rows="2" required placeholder="Purpose of claim"></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Submit Claim</button>
+      </form>
+      <div class="divider"></div>
+      ${myClaims.length===0 ? emptyState('No entries recorded.', "Your reimbursement claims will appear here.") :
+        myClaims.map(c=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--glass-border);font-size:12.5px;"><span>${c.type} · ₹${Number(c.amount).toLocaleString('en-IN')}</span><span class="badge badge-${c.status}">${c.status}</span></div>`).join('')}
+    </div>
+  </div>
+  <div class="glass panel" style="margin-top:20px;">
+    <div class="panel-title" style="margin-bottom:12px;">Raise a Grievance to HR</div>
+    <form onsubmit="return submitGrievance(event)">
+      <div class="field"><label>Message</label><textarea name="message" rows="3" required placeholder="This is shared privately with HR only"></textarea></div>
+      <button class="btn btn-ghost btn-block" type="submit">Send Privately to HR</button>
+    </form>
+  </div>`;
+}
+function submitLeave(e){
+  e.preventDefault();
+  const d = processForm('leave', e.target);
+  const p = currentProfile();
+  DB.leaves.create({ profileId:p.id, start:d.start, end:d.end, reason:d.reason });
+  e.target.reset(); renderView();
+  toast('Leave request submitted','success');
+  return false;
+}
+function submitClaim(e){
+  e.preventDefault();
+  const d = processForm('claim', e.target);
+  const p = currentProfile();
+  DB.financialClaims.create({ profileId:p.id, type:d.type, amount:Number(d.amount), reason:d.reason });
+  e.target.reset(); renderView();
+  toast('Claim filed','success');
+  return false;
+}
+function submitGrievance(e){
+  e.preventDefault();
+  const d = processForm('grievance', e.target);
+  const p = currentProfile();
+  DB.hrTickets.create({ profileId:p.id, message:d.message });
+  e.target.reset(); renderView();
+  toast('Sent privately to HR','success');
+  return false;
+}
+
+/* =========================================================================
+   PROJECTS (Employee standard view + Project Head variant)
+   ========================================================================= */
+function viewProjects(){
+  const p = currentProfile();
+  const isPH = session.role === 'project_head';
+  const myProjects = DB.projects.list().filter(pr => pr.teamIds.includes(p.id) || pr.headId === p.id);
+
+  let html = `<div class="glass panel">
+    <div class="panel-head"><div class="panel-title">My Projects<span>${myProjects.length} assigned</span></div>${isPH?`<button class="btn btn-primary btn-sm" onclick="openCreateProjectModal()">+ New Project</button>`:''}</div>
+    ${myProjects.length===0 ? emptyState('No entries recorded.', isPH ? "Spin up your first project." : "You'll see projects here once assigned.") :
+      myProjects.map(pr => {
+        const phases = DB.phases.forProject(pr.id);
+        const team = pr.teamIds.map(id => DB.profiles.get(id)).filter(Boolean);
+        return `<div class="glass panel" style="margin-bottom:14px;background:rgba(255,255,255,0.03);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div><b>${esc(pr.name)}</b><div style="font-size:11.5px;color:var(--text-low);">${team.length} team members · ${phases.length} phases</div></div>
+            <span class="badge badge-active">${esc(pr.status)}</span>
+          </div>
+          ${phases.length ? `<div style="margin-top:12px;">${phases.map(ph=>`
+            <div style="margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-mid);margin-bottom:4px;">
+                <span>${esc(ph.name)} ${ph.deadline?`· due ${esc(ph.deadline)}`:''}</span><span>${ph.progress}%</span>
+              </div>
+              <div class="progress-track"><div class="progress-fill" style="width:${ph.progress}%;"></div></div>
+              ${!isPH ? `<input type="range" min="0" max="100" value="${ph.progress}" style="width:100%;margin-top:6px;" oninput="DB.phases.update('${ph.id}',{progress:Number(this.value)}); this.parentElement.querySelector('.progress-fill').style.width=this.value+'%';" onchange="renderView(); toast('Progress updated','success')">` : ''}
+            </div>`).join('')}</div>` : ''}
+          ${isPH ? `
+          <div class="divider"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="pill-btn" onclick="openRecruitModal('${pr.id}')">Recruit Team</button>
+            <button class="pill-btn" onclick="openPhaseModal('${pr.id}')">Add Phase</button>
+            <button class="pill-btn gold" onclick="openRequirementModal('${pr.id}')">File Procurement Need</button>
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+  </div>`;
+  return html;
+}
+function openCreateProjectModal(){
+  openModal(`
+    <div class="modal-title">Spin Up New Project</div>
+    <form onsubmit="return submitCreateProject(event)">
+      <div class="field"><label>Project Name</label><input name="name" required placeholder="e.g. Falcon-X Payload Drop"></div>
+      <div class="field"><label>Description</label><textarea name="description" rows="3" placeholder="Optional context"></textarea></div>
+      <button class="btn btn-primary btn-block" type="submit">Create</button>
+    </form>`);
+}
+function submitCreateProject(e){
+  e.preventDefault();
+  const d = processForm('project', e.target);
+  const p = currentProfile();
+  DB.projects.create({ name:d.name, description:d.description, headId:p.id });
+  closeModal(); renderView();
+  toast('Project created','success');
+  return false;
+}
+function openRecruitModal(projectId){
+  const pool = DB.profiles.list().filter(pr => pr.isActive && (pr.role==='employee' || pr.role==='project_head'));
+  const project = DB.projects.get(projectId);
+  openModal(`
+    <div class="modal-title">Recruit From Active Pool</div>
+    <form onsubmit="return submitRecruit(event,'${projectId}')">
+      ${pool.length===0 ? emptyState('No entries recorded.', "No active employees available to recruit yet.") :
+        pool.map(e=>`<label class="checkbox-row"><input type="checkbox" name="team" value="${e.id}" ${project.teamIds.includes(e.id)?'checked':''}> ${esc(e.fullName)} <span style="color:var(--text-low);">— ${esc(e.designation||e.role)}</span></label>`).join('')}
+      ${pool.length ? `<button class="btn btn-primary btn-block" style="margin-top:14px;" type="submit">Save Team</button>` : ''}
+    </form>`);
+}
+function submitRecruit(e, projectId){
+  e.preventDefault();
+  const checked = Array.from(e.target.querySelectorAll('input[name="team"]:checked')).map(el=>el.value);
+  DB.projects.update(projectId, { teamIds: checked });
+  closeModal(); renderView();
+  toast('Team updated','success');
+  return false;
+}
+function openPhaseModal(projectId){
+  openModal(`
+    <div class="modal-title">Define Deliverable Phase</div>
+    <form onsubmit="return submitPhase(event,'${projectId}')">
+      <div class="field"><label>Phase Name</label><input name="name" required placeholder="e.g. Prototype Assembly"></div>
+      <div class="field"><label>Target Deadline</label><input type="date" name="deadline"></div>
+      <button class="btn btn-primary btn-block" type="submit">Add Phase</button>
+    </form>`);
+}
+function submitPhase(e, projectId){
+  e.preventDefault();
+  const d = processForm('phase', e.target);
+  DB.phases.create({ projectId, name:d.name, deadline:d.deadline });
+  closeModal(); renderView();
+  toast('Phase added','success');
+  return false;
+}
+function openRequirementModal(projectId){
+  openModal(`
+    <div class="modal-title">File Procurement Requirement</div>
+    <form onsubmit="return submitRequirement(event,'${projectId}')">
+      <div class="field"><label>Item</label><input name="item" required placeholder="e.g. 6S LiPo Battery Pack"></div>
+      <div class="field"><label>Quantity</label><input type="number" name="qty" required placeholder="4"></div>
+      <div class="field"><label>Reason</label><textarea name="reason" rows="3" required placeholder="Why this is needed"></textarea></div>
+      <button class="btn btn-gold btn-block" type="submit">Send to Admin for Approval</button>
+    </form>`);
+}
+function submitRequirement(e, projectId){
+  e.preventDefault();
+  const d = processForm('requirement', e.target);
+  const p = currentProfile();
+  DB.requirements.create({ projectId, projectHeadId:p.id, item:d.item, qty:Number(d.qty), reason:d.reason });
+  closeModal(); renderView();
+  toast('Requirement filed for Admin approval','success');
+  return false;
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+(async function boot(){
+  loadState();
+  loadSession();
+  if(session){ document.getElementById('appRoot').classList.add('active'); renderDashboard(); }
+  else { renderLogin(); }
+  await DB.profiles.refresh();
+  if(session) renderDashboard();
+})();
+</script>
+</body>
+</html>
